@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: raw
+    database: GREENTRIPS
+    schema: public
+    tables:
+      - name: GREEN_TRIPDATA_2021_12
+        description: "Raw green taxi trip data from Parquet file"
+      - name: TAXI_ZONE_LOOKUP
+        description: "Lookup table for taxi zones"

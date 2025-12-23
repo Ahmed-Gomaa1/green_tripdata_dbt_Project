@@ -1,0 +1,285 @@
+version: 2
+
+models:
+  # ========================================
+  # MODEL 1: Cleaned Trips
+  # ========================================
+  - name: int_green_trips_cleaned
+    description: "Intermediate model that filters out invalid and suspicious trips from staging data. Applies data quality rules to ensure only valid trips are used in downstream models."
+    columns:
+      - name: vendor_id
+        description: "Taxi vendor ID (passed through from staging)"
+      
+      - name: pickup_datetime
+        description: "Trip start timestamp"
+      
+      - name: dropoff_datetime
+        description: "Trip end timestamp"
+      
+      - name: trip_distance
+        description: "Trip distance in miles (validated: > 0 and < 500)"
+      
+      - name: fare_amount
+        description: "Base fare amount (validated: > 0 and < 1000)"
+      
+      - name: total_amount
+        description: "Total trip cost (validated: > 0 and < 5000)"
+      
+      - name: passenger_count
+        description: "Number of passengers (validated: 1-6 passengers)"
+
+  # ========================================
+  # MODEL 2: Enriched Trips
+  # ========================================
+  - name: int_green_trips_enriched
+    description: "Enriched trip data with calculated fields, categorizations, and business logic. This is the main analytical model that adds all derived metrics."
+    columns:
+      # All original fields passed through
+      - name: vendor_id
+        description: "Taxi vendor ID"
+      
+      - name: rate_code_id
+        description: "Rate code for the trip"
+      
+      - name: pickup_location_id
+        description: "Pickup taxi zone ID"
+      
+      - name: dropoff_location_id
+        description: "Dropoff taxi zone ID"
+      
+      - name: payment_type_id
+        description: "Payment method code"
+      
+      - name: trip_type_id
+        description: "Trip type code (street-hail or dispatch)"
+      
+      - name: pickup_datetime
+        description: "Trip start timestamp"
+      
+      - name: dropoff_datetime
+        description: "Trip end timestamp"
+      
+      - name: passenger_count
+        description: "Number of passengers"
+      
+      - name: trip_distance
+        description: "Trip distance in miles"
+      
+      - name: fare_amount
+        description: "Base fare amount"
+      
+      - name: extra
+        description: "Extra charges"
+      
+      - name: mta_tax
+        description: "MTA tax"
+      
+      - name: tip_amount
+        description: "Tip amount"
+      
+      - name: tolls_amount
+        description: "Tolls paid"
+      
+      - name: improvement_surcharge
+        description: "Improvement surcharge"
+      
+      - name: congestion_surcharge
+        description: "Congestion surcharge"
+      
+      - name: total_amount
+        description: "Total amount charged"
+      
+      - name: store_and_fwd_flag
+        description: "Store and forward flag"
+      
+      - name: ehail_fee
+        description: "E-hail fee"
+      
+      # === CALCULATED TIME FIELDS ===
+      - name: trip_duration_minutes
+        description: "Calculated trip duration in minutes from pickup to dropoff"
+      
+      - name: pickup_date
+        description: "Date of pickup (extracted from pickup_datetime)"
+      
+      - name: pickup_hour
+        description: "Hour of pickup (0-23, extracted from pickup_datetime)"
+      
+      - name: pickup_day_of_week
+        description: "Day of week for pickup (0=Monday, 6=Sunday)"
+      
+      - name: pickup_day_name
+        description: "Name of the day (Monday, Tuesday, etc.)"
+      
+      - name: time_of_day_category
+        description: "Time of day categorization: Morning Rush (6-9), Evening Rush (16-19), Late Night (22-5), Off Peak (all other hours)"
+      
+      - name: day_type
+        description: "Weekend or Weekday classification"
+      
+      # === DISTANCE CATEGORIZATION ===
+      - name: distance_category
+        description: "Distance categorization: Very Short (< 1 mi), Short (1-3 mi), Medium (3-10 mi), Long (10+ mi)"
+      
+      # === FINANCIAL CALCULATIONS ===
+      - name: tip_percentage
+        description: "Tip amount as a percentage of fare amount. Only meaningful for credit card payments as cash tips are not captured"
+      
+      - name: revenue_per_mile
+        description: "Total amount divided by trip distance. Indicates pricing efficiency"
+      
+      - name: base_charges
+        description: "Sum of fare_amount, extra, mta_tax, improvement_surcharge, and congestion_surcharge (excludes tips and tolls)"
+      
+      # === SPEED CALCULATION ===
+      - name: avg_speed_mph
+        description: "Average speed in miles per hour, calculated as distance divided by duration. Can indicate traffic conditions"
+      
+      # === PASSENGER EFFICIENCY ===
+      - name: revenue_per_passenger
+        description: "Total amount divided by passenger count"
+      
+      # === QUALITY FLAGS ===
+      - name: is_high_tip
+        description: "Boolean flag indicating if tip percentage is greater than 20%"
+      
+      - name: is_long_trip
+        description: "Boolean flag indicating if trip duration is greater than 30 minutes"
+      
+      - name: is_airport_trip
+        description: "Boolean flag indicating if pickup or dropoff location is a known airport zone (132=JFK, 138=LaGuardia)"
+      
+      - name: is_shared_ride
+        description: "Boolean flag indicating if passenger count is greater than 1"
+
+  # ========================================
+  # MODEL 3: Daily Aggregations
+  # ========================================
+  - name: int_green_trips_daily
+    description: "Daily aggregated metrics for green taxi trips. Used for trend analysis and daily reporting."
+    columns:
+      - name: pickup_date
+        description: "Date of trips"
+      
+      - name: pickup_day_name
+        description: "Name of the day (Monday, Tuesday, etc.)"
+      
+      - name: day_type
+        description: "Weekend or Weekday"
+      
+      # === TRIP COUNTS ===
+      - name: total_trips
+        description: "Total number of trips on this date"
+      
+      - name: active_vendors
+        description: "Number of distinct vendors operating on this date"
+      
+      - name: unique_pickup_locations
+        description: "Number of distinct pickup locations used on this date"
+      
+      - name: unique_dropoff_locations
+        description: "Number of distinct dropoff locations used on this date"
+      
+      # === DISTANCE METRICS ===
+      - name: total_distance_miles
+        description: "Total miles driven across all trips on this date"
+      
+      - name: avg_distance_miles
+        description: "Average trip distance in miles"
+      
+      - name: min_distance_miles
+        description: "Shortest trip distance on this date"
+      
+      - name: max_distance_miles
+        description: "Longest trip distance on this date"
+      
+      # === DURATION METRICS ===
+      - name: avg_duration_minutes
+        description: "Average trip duration in minutes"
+      
+      - name: min_duration_minutes
+        description: "Shortest trip duration on this date"
+      
+      - name: max_duration_minutes
+        description: "Longest trip duration on this date"
+      
+      # === SPEED METRICS ===
+      - name: avg_speed_mph
+        description: "Average speed across all trips. Can indicate traffic conditions"
+      
+      # === PASSENGER METRICS ===
+      - name: total_passengers
+        description: "Total number of passengers transported on this date"
+      
+      - name: avg_passengers_per_trip
+        description: "Average number of passengers per trip"
+      
+      # === REVENUE METRICS ===
+      - name: total_fare_amount
+        description: "Sum of all base fares on this date"
+      
+      - name: total_tips
+        description: "Sum of all tips on this date (credit card only)"
+      
+      - name: total_tolls
+        description: "Sum of all tolls paid on this date"
+      
+      - name: total_extras
+        description: "Sum of all extra charges on this date"
+      
+      - name: total_revenue
+        description: "Sum of all total_amounts on this date"
+      
+      - name: avg_revenue_per_trip
+        description: "Average revenue per trip"
+      
+      - name: avg_revenue_per_mile
+        description: "Average revenue per mile driven"
+      
+      - name: avg_revenue_per_passenger
+        description: "Average revenue per passenger"
+      
+      # === TIP ANALYSIS ===
+      - name: avg_tip_percentage
+        description: "Average tip percentage across all trips"
+      
+      - name: high_tip_count
+        description: "Number of trips with tip percentage > 20%"
+      
+      # === PAYMENT BREAKDOWN ===
+      - name: credit_card_trips
+        description: "Number of trips paid by credit card"
+      
+      - name: cash_trips
+        description: "Number of trips paid by cash"
+      
+      - name: credit_card_revenue
+        description: "Total revenue from credit card payments"
+      
+      - name: cash_revenue
+        description: "Total revenue from cash payments"
+      
+      # === TRIP TYPE BREAKDOWN ===
+      - name: long_trips
+        description: "Number of trips longer than 30 minutes"
+      
+      - name: airport_trips
+        description: "Number of trips to/from airports"
+      
+      - name: shared_rides
+        description: "Number of trips with multiple passengers"
+      
+      # === DISTANCE CATEGORY DISTRIBUTION ===
+      - name: very_short_trips
+        description: "Number of trips < 1 mile"
+      
+      - name: short_trips
+        description: "Number of trips 1-3 miles"
+      
+      - name: medium_trips
+        description: "Number of trips 3-10 miles"
+      
+      - name: long_distance_trips
+        description: "Number of trips 10+ miles"
+
+ 
